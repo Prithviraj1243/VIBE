@@ -1,2 +1,10 @@
 # FlowX
-EscalAI is an AI-powered workflow automation platform that turns incoming requests into actionable tasks—automatically categorizing, prioritizing, assigning, tracking, and escalating them so nothing gets stuck or forgotten.
+
+FlowX is an AI-powered document workflow system. This first version is the landing page only — login, upload, and agent logic come later.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
