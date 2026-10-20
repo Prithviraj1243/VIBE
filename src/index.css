@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: #141414;
+  color: #f4f4f1;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #F28C45;
+  color: #191919;
+}
+
+:focus-visible {
+  outline: 2px solid #F28C45;
+  outline-offset: 2px;
+}
+
+.light-surface :focus-visible {
+  outline-color: #191919;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F28C45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .surface {
+    @apply bg-raised border border-hairline rounded-xl;
+  }
+  .label-kicker {
+    @apply text-[11px] font-semibold tracking-[0.14em] uppercase text-neutral-500;
+  }
+  .input {
+    @apply w-full rounded-lg border border-hairline bg-[#141414] px-3 py-2 text-sm text-white;
+  }
+}
