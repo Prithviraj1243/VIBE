@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ActivityEvent,
   Agent,
@@ -21,6 +21,7 @@ import {
   initialUserPreferences,
 } from '../mocks/data';
 import { authService } from '../services/auth/authService';
+import { supabaseAuthService } from '../services/supabase/supabaseAuthService';
 import { commandProcessor } from '../services/ai/commandProcessor';
 import { captionService } from '../services/ai/captionService';
 import { localStore } from '../services/storage/localStore';
@@ -40,6 +41,7 @@ interface AppState {
   conversations: Conversation[];
   analytics: typeof demoAnalytics;
   loginAsDemo: () => void;
+  loginWithGoogleCredential: (credential: string) => Promise<void>;
   logout: () => void;
   completeOnboarding: (prefs: Partial<UserPreferences>) => void;
   skipOnboarding: () => void;
@@ -68,6 +70,30 @@ const AppContext = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const existing = authService.getSession();
   const [sessionUser, setSessionUser] = useState<UserProfile | null>(existing?.user ?? null);
+
+  // ── Subscribe to Supabase auth state changes (SSO, token refresh, etc.) ──
+  const supabaseSubRef = useRef<{ unsubscribe: () => void } | null>(null);
+  useEffect(() => {
+    // Restore session from Supabase if available
+    supabaseAuthService.getSession().then((session) => {
+      if (session?.user && !sessionUser) {
+        setSessionUser(session.user);
+      }
+    });
+
+    // Live listener
+    supabaseSubRef.current = supabaseAuthService.onAuthChange((profile) => {
+      setSessionUser(profile);
+      if (!profile) {
+        localStore.remove('session');
+      }
+    });
+
+    return () => {
+      supabaseSubRef.current?.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isOnboarded, setIsOnboarded] = useState(() => localStore.get('onboarded', false));
   const [preferences, setPreferencesState] = useState<UserPreferences>(() =>
     localStore.get('prefs', initialUserPreferences),
@@ -96,8 +122,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSessionUser(session.user);
   };
 
+  const loginWithGoogleCredential = async (credential: string) => {
+    // Use Supabase auth (falls back to JWT decode if Supabase unreachable)
+    const session = await supabaseAuthService.signInWithGoogleIdToken(credential);
+    setSessionUser(session.user);
+    if (session.user.displayName) {
+      setPreferencesState((p) => ({ ...p, displayName: session.user.displayName }));
+    }
+  };
+
   const logout = () => {
-    authService.signOut();
+    supabaseAuthService.signOut();
     setSessionUser(null);
   };
 
@@ -175,6 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       conversations,
       analytics: demoAnalytics,
       loginAsDemo,
+      loginWithGoogleCredential,
       logout,
       completeOnboarding,
       skipOnboarding: () => setIsOnboarded(true),
@@ -215,6 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         platforms.map((platform) => captionService.generate({ topic, platform, preferences, tone })),
       requestPublish,
       clearDemoData: () => {
+        supabaseAuthService.signOut();
         localStore.clearDemo();
         setSessionUser(null);
         setIsOnboarded(false);

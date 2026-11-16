@@ -1,19 +1,24 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AppContent } from './App';
 import { AppProvider } from './context/AppContext';
 import { ToastProvider } from './components/feedback/ToastProvider';
 import './index.css';
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <ToastProvider>
-        <AppProvider>
-          <AppContent />
-        </AppProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <BrowserRouter>
+        <ToastProvider>
+          <AppProvider>
+            <AppContent />
+          </AppProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );

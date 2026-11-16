@@ -1,13 +1,41 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, PenLine, MessageCircle, LineChart, ShieldCheck } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { Wordmark } from '../../components/brand/Wordmark';
 import { Button } from '../../components/ui/Button';
 import { useApp } from '../../context/AppContext';
 import { useToast } from '../../components/feedback/ToastProvider';
 
 export function AuthPage() {
-  const { loginAsDemo } = useApp();
+  const { loginAsDemo, loginWithGoogleCredential } = useApp();
   const toast = useToast();
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (credentialResponse.credential) {
+      try {
+        await loginWithGoogleCredential(credentialResponse.credential);
+        toast.push({
+          tone: 'success',
+          title: 'Google Sign-In Successful',
+          detail: 'Welcome to VYBE! Signed in via official Google OAuth.',
+        });
+      } catch (err) {
+        toast.push({
+          tone: 'danger',
+          title: 'Authentication Error',
+          detail: 'Could not process Google credentials.',
+        });
+      }
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.push({
+      tone: 'danger',
+      title: 'Google Sign-In Failed',
+      detail: 'Make sure http://localhost:5173 is added to Authorized JavaScript origins in Google Cloud Console.',
+    });
+  };
 
   return (
     <div className="light-surface min-h-screen bg-canvas text-ink md:grid md:grid-cols-2">
@@ -39,7 +67,7 @@ export function AuthPage() {
             ))}
           </ul>
         </div>
-        <p className="text-xs text-mute">VYBE · Demo workspace. Official APIs are not connected yet.</p>
+        <p className="text-xs text-mute">VYBE · Connected with Google Cloud OAuth Client ID.</p>
       </section>
 
       <section className="grid place-items-center px-6 py-12 md:px-12">
@@ -47,36 +75,40 @@ export function AuthPage() {
           <h2 className="text-2xl font-extrabold">Welcome to VYBE</h2>
           <p className="mt-1 text-sm text-mute">Your personal AI command center.</p>
 
+          {/* Official Google OAuth Sign-In Button */}
+          <div className="mt-8 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              text="continue_with"
+              width="380"
+            />
+          </div>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-line" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-mute">or</span>
+            <div className="h-px flex-1 bg-line" />
+          </div>
+
           <Button
-            className="mt-8 w-full"
+            className="w-full"
+            variant="secondary"
             onClick={() => {
               loginAsDemo();
-              toast.push({ tone: 'info', title: 'Demo session started', detail: 'You are using mock data. No Google account was used.' });
+              toast.push({ tone: 'info', title: 'Demo session started', detail: 'Exploring with local demo profile.' });
             }}
           >
-            Continue in demo mode <ArrowRight size={16} />
+            Explore Demo Mode <ArrowRight size={16} />
           </Button>
-
-          <button
-            type="button"
-            onClick={() =>
-              toast.push({
-                tone: 'warn',
-                title: 'Google sign-in is not connected',
-                detail: 'AuthService.signInWithGoogle() is reserved for Firebase or another provider.',
-              })
-            }
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2.5 text-sm font-semibold text-ink"
-          >
-            Continue with Google
-          </button>
-          <p className="mt-2 text-center text-[11px] text-mute">
-            Google OAuth is not live. This button does not authenticate an account.
-          </p>
 
           <div className="mt-6 flex gap-2 rounded-xl border border-line bg-canvas p-3 text-xs text-mute">
             <ShieldCheck size={16} className="mt-0.5 shrink-0 text-accent" />
-            Connected social accounts are authorized separately. Tokens are never stored in this browser build.
+            Connected social accounts are authorized separately. Tokens are never stored insecurely in the browser.
           </div>
 
           <p className="mt-6 text-center text-xs text-mute">

@@ -31,7 +31,7 @@ export interface UserProfile {
   avatar?: string;
   timeZone: string;
   language: string;
-  authMode: 'demo' | 'google_pending';
+  authMode: 'demo' | 'google_pending' | 'google';
 }
 
 export interface UserPreferences {
@@ -218,7 +218,7 @@ export interface AnalyticsSnapshot {
 
 export interface AuthSession {
   user: UserProfile;
-  mode: 'demo';
+  mode: 'demo' | 'google';
   issuedAt: string;
 }
 
