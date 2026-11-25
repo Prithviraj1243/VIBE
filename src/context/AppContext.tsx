@@ -26,6 +26,7 @@ import { commandProcessor } from '../services/ai/commandProcessor';
 import { captionService } from '../services/ai/captionService';
 import { localStore } from '../services/storage/localStore';
 import { socialPublishingService } from '../services/social';
+import { linkedinTokenStore, postToLinkedIn } from '../services/social/linkedinService';
 import type { CommandPlan } from '../types';
 
 interface AppState {
@@ -55,7 +56,7 @@ interface AppState {
   toggleAccount: (id: string) => void;
   runCommand: (command: string) => Promise<CommandPlan>;
   generateCaptions: (topic: string, platforms: ContentDraft['platforms'], tone: UserPreferences['writingStyle']) => ReturnType<typeof captionService.generate>[];
-  requestPublish: (draftId: string) => Promise<string>;
+  requestPublish: (draftId: string, draftOverride?: Pick<ContentDraft, 'platforms' | 'linkedin' | 'brief'>) => Promise<string>;
   clearDemoData: () => void;
   // Aliases for unified UI components
   activityLogs: ActivityEvent[];
@@ -178,7 +179,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return plan;
   };
 
-  const requestPublish = async (draftId: string) => {
+  const requestPublish = async (
+    draftId: string,
+    draftOverride?: Pick<ContentDraft, 'platforms' | 'linkedin' | 'brief'>,
+  ) => {
+    const draft = draftOverride ?? drafts.find((d) => d.id === draftId);
+    const wantsLinkedIn = draft?.platforms.includes('linkedin');
+
+    if (wantsLinkedIn && linkedinTokenStore.isConnected()) {
+      const li = draft?.linkedin;
+      const text = [li?.hook, li?.caption, li?.cta, li?.hashtags?.join(' ')]
+        .filter(Boolean)
+        .join('\n\n') || draft?.brief || '';
+
+      if (!text.trim()) {
+        const reason = 'Cannot publish an empty LinkedIn post. Add text or generate captions first.';
+        updateDraft(draftId, { status: 'failed' });
+        return reason;
+      }
+
+      const liRes = await postToLinkedIn(text);
+      if (liRes.success) {
+        updateDraft(draftId, { status: 'published' });
+        const igNote = draft?.platforms.includes('instagram')
+          ? ' (Instagram skipped — Meta Graph API not connected)'
+          : '';
+        const detail = `Published live to LinkedIn (Post ID: ${liRes.postId})${igNote}`;
+        log({
+          taskName: 'Published to LinkedIn',
+          triggerCommand: `Publish draft ${draftId}`,
+          agent: 'Publishing Agent',
+          platform: 'linkedin',
+          status: 'succeeded',
+          stepsCompleted: 3,
+          stepsTotal: 3,
+          details: detail,
+          completedAt: new Date().toISOString(),
+        });
+        return detail;
+      }
+
+      updateDraft(draftId, { status: 'failed' });
+      log({
+        taskName: 'LinkedIn publish failed',
+        triggerCommand: `Publish draft ${draftId}`,
+        agent: 'Publishing Agent',
+        platform: 'linkedin',
+        status: 'failed',
+        stepsCompleted: 2,
+        stepsTotal: 3,
+        details: liRes.error || 'LinkedIn API rejected the post.',
+        error: liRes.error,
+        completedAt: new Date().toISOString(),
+      });
+      return liRes.error || 'LinkedIn publish failed.';
+    }
+
     const result = await socialPublishingService.publish(draftId);
     updateDraft(draftId, { status: 'failed' });
     log({

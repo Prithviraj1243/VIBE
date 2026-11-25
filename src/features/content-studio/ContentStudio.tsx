@@ -63,7 +63,7 @@ export function ContentStudio() {
   };
 
   const save = (status: 'draft' | 'awaiting_approval' | 'scheduled') => {
-    addDraft({
+    const draftId = addDraft({
       title: brief.slice(0, 72) || 'Untitled draft',
       brief,
       mediaUrl: media?.url,
@@ -81,6 +81,7 @@ export function ContentStudio() {
       tone: 'success',
       title: status === 'draft' ? 'Draft saved locally' : status === 'scheduled' ? 'Queued on the local calendar' : 'Submitted for approval',
     });
+    return draftId;
   };
 
   return (
@@ -100,10 +101,14 @@ export function ContentStudio() {
           </Button>
           <Button
             onClick={async () => {
-              const id = Date.now().toString();
-              save('scheduled');
-              const reason = await requestPublish(id);
-              toast.push({ tone: 'warn', title: 'Publishing not connected', detail: reason });
+              const id = save('scheduled');
+              const reason = await requestPublish(id, { platforms, linkedin: li, brief });
+              const published = reason.startsWith('Published live to LinkedIn');
+              toast.push({
+                tone: published ? 'success' : 'warn',
+                title: published ? 'Published to LinkedIn!' : 'Publishing status',
+                detail: reason,
+              });
             }}
           >
             <Send size={14} /> Prepare publish request
