@@ -5,6 +5,7 @@ import { SplashScreen } from './features/splash/SplashScreen';
 import { AuthPage } from './features/auth/AuthPage';
 import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { AppShell } from './components/layout/AppShell';
+import { LinkedInCallback } from './features/integrations/LinkedInCallback';
 
 // Features
 import { DashboardOverview } from './features/dashboard/DashboardOverview';
@@ -30,6 +31,11 @@ export const AppContent: React.FC = () => {
     setShowSplash(false);
   };
 
+  // LinkedIn OAuth callback — always accessible regardless of auth state
+  if (window.location.pathname === '/linkedin/callback') {
+    return <LinkedInCallback />;
+  }
+
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashDone} />;
   }
@@ -44,6 +50,7 @@ export const AppContent: React.FC = () => {
 
   return (
     <Routes>
+      <Route path="/linkedin/callback" element={<LinkedInCallback />} />
       <Route path="/" element={<AppShell />}>
         <Route index element={<DashboardOverview />} />
         <Route path="command" element={<CommandCenter />} />
